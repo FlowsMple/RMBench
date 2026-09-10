@@ -113,7 +113,7 @@ def eval_function_decorator(policy_name, model_name, conda_env=None):
 
 
 def get_camera_config(camera_type):
-    camera_config_path = os.path.join(parent_directory, "../task_config/_camera_config.yml")
+    camera_config_path = os.path.join(parent_directory, "../env_cfg/task_config/_camera_config.yml")
 
     assert os.path.isfile(camera_config_path), "task config file is missing"
 
@@ -242,7 +242,7 @@ def main(usr_args):
 
     get_model = eval_function_decorator(policy_name, "get_model", conda_env=policy_conda_env)
 
-    with open(f"./task_config/{task_config}.yml", "r", encoding="utf-8") as f:
+    with open(f"./env_cfg/task_config/{task_config}.yml", "r", encoding="utf-8") as f:
         args = yaml.load(f.read(), Loader=yaml.FullLoader)
 
     args['task_name'] = task_name

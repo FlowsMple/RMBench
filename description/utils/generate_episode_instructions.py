@@ -228,6 +228,7 @@ def generate_episode_descriptions(task_name: str, episodes: List[Dict[str, str]]
                     break
                 description = replace_placeholders_unseen(instruction, episode)
                 unseen_episode_descriptions.append(description)
+
         all_generated_descriptions.append({
             "episode_index": i,
             "seen": seen_episode_descriptions,
@@ -258,7 +259,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     setting_file = os.path.join(
-        parent_directory, f"../../task_config/{args.setting}.yml"
+        parent_directory, f"../../env_cfg/task_config/{args.setting}.yml"
     )
     with open(setting_file, "r", encoding="utf-8") as f:
         args_dict = yaml.load(f.read(), Loader=yaml.FullLoader)
@@ -269,7 +270,7 @@ if __name__ == "__main__":
 
     # Generate descriptions
     results = generate_episode_descriptions(args.task_name, episodes, args.max_num)
-    
+
     # Save results to output files
     save_episode_descriptions(args.task_name, args.setting, results)
     print("Successfully Saved Instructions")

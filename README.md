@@ -15,7 +15,7 @@ Detailed evaluation results can be found in the Hugging Face model cards above.
 
 # 🧑🏻‍💻 RMBench Usage
 
-> This project is built upon [RoboTwin 2.0](https://github.com/robotwin-Platform/RoboTwin), and you can seamlessly transfer your policy code between the two projects.
+> This project is built upon [RoboTwin 2.0](https://github.com/robotwin-Platform/RoboTwin). Policy evaluation can go through the original `policy/` adapters or through [XPolicyLab](https://github.com/XPolicyLab/XPolicyLab).
 
 ## 1. Installation
 First, prepare a conda environment.
@@ -28,20 +28,33 @@ conda activate RMBench
 RMBench Repo: https://github.com/RoboTwin-Platform/RMBench
 
 ```
-git clone https://github.com/RoboTwin-Platform/RMBench.git
+git clone --recurse-submodules https://github.com/RoboTwin-Platform/RMBench.git
+cd RMBench
 ```
 
-Then, run `script/_install.sh` to install basic conda envs and CuRobo:
+For an existing checkout, initialize the pinned XPolicyLab submodule:
 
 ```
-bash script/_install.sh
+git submodule update --init --recursive XPolicyLab
+```
+
+Then, run `scripts/_install.sh` to install basic conda envs, CuRobo, and XPolicyLab:
+
+```
+bash scripts/_install.sh
+```
+
+To refresh the XPolicyLab pin later:
+
+```
+bash scripts/update_xpolicylab.sh
 ```
 
 ## 2. Download Assets
 To download the assets, run the following command. If you encounter any rate-limit issues, please log in to your Hugging Face account by running `huggingface-cli login`:
 
 ```
-bash script/_download_assets.sh
+bash scripts/_download_assets.sh
 ```
 
 ## 3. Download Data
@@ -49,7 +62,7 @@ bash script/_download_assets.sh
 Please run the following command to download all data.
 
 ```
-bash script/_download_data.sh
+bash scripts/_download_data.sh
 ```
 
 <details>
@@ -65,9 +78,34 @@ Please strictly follow our tutorial in [RoboTwin 2.0 Doc - Collect Data](https:/
 bash collect_data.sh ${task_name} ${task_config} ${gpu_id}
 # Example: bash collect_data.sh cover_blocks demo_clean 0
 ```
+
+New collections write XPolicyLab-format HDF5 under `data/<task_config>/<task_name>/<embodiment>/`:
+
+```text
+data/demo_clean/cover_blocks/aloha_agilex/data/episode_0000000.hdf5
+```
+
+**Always decode through `decode_image_bit`, and always encode through `encode_image_bit`.** Camera frames are stored as JPEG bits in two formats (legacy channel-reversed JPEGs and standard `XPL-RGB1`-marked JPEGs). Both decode to RGB. A local copy is in [`data/decode_image_bit.py`](data/decode_image_bit.py); prefer `XPolicyLab.utils.process_data` when that package is installed:
+
+```python
+from XPolicyLab.utils.process_data import decode_image_bit, encode_image_bit
+rgb = decode_image_bit(image_bits)  # RGB for every data version
+```
+
+Do **not** add `cv2.cvtColor(..., COLOR_BGR2RGB)` after `decode_image_bit`. At eval time the policy server already receives decoded RGB arrays.
 </details>
 
 ## 4. Run Policies
+
+Two evaluation paths are available.
+
+**Original adapters** (still in `policy/`):
+
+```
+python scripts/eval_policy.py --config policy/<Name>/deploy_policy.yml ...
+# or
+bash policy/<Name>/eval.sh ...
+```
 
 1. Mem-0 (ours): [See Mem-0 Document](./policy/Mem-0/README.md)
 2. DP: [See DP Document](https://robotwin-platform.github.io/doc/usage/DP.html)
@@ -75,7 +113,25 @@ bash collect_data.sh ${task_name} ${task_config} ${gpu_id}
 4. Pi 0.5: [See Pi 0.5 Document](https://robotwin-platform.github.io/doc/usage/Pi05.html)
 5. X-VLA: [See X-VLA Document](./policy/X-VLA/README.md)
 6. Other Policies (Pi0, RDT, etc): [See Document](https://robotwin-platform.github.io/doc/usage) and [See Folder](./policy/)
-6. **Configure your policy:** [See Tutorial Here](https://robotwin-platform.github.io/doc/usage/deploy-your-policy.html)
+7. **Configure your policy:** [See Tutorial Here](https://robotwin-platform.github.io/doc/usage/deploy-your-policy.html)
+
+**XPolicyLab adapters** (recommended for new work):
+
+```
+bash XPolicyLab/policy/Mem_0/eval.sh RMBench <task_name> <ckpt_name> <env_cfg_type> <action_type> <seed> \
+  <policy_gpu_id> <env_gpu_id> <policy_env> <eval_env>
+
+# or schedule the RMBench task list
+bash scripts/eval_policy.sh multitask \
+  --config env_cfg/eval/all_tasks.yml \
+  --policy-name Mem_0 \
+  --env-cfg-type arx_x5 \
+  --action-type joint \
+  --ckpt-name <ckpt_name> \
+  --eval-env-conda-env RMBench
+```
+
+See [XPolicyLab/policy/Mem_0/](XPolicyLab/policy/Mem_0/) for the Mem-0 adapter. Task configs live in `env_cfg/task_config/`.
 
 # 👍 Citations
 
